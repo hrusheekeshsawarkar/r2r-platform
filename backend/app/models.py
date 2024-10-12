@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import date
+from datetime import date, datetime
 
 class Event(BaseModel):
     id: Optional[str]
@@ -13,6 +13,12 @@ class EventProgress(BaseModel):
     domain: str
     date: date
     progress: float  # Progress in a particular domain (e.g., distance, time, etc.)
+
+    def dict(self, *args, **kwargs):
+        data = super().dict(*args, **kwargs)
+        # Convert date to datetime
+        data['date'] = datetime.combine(data['date'], datetime.min.time())
+        return data
 
 class UserRegistration(BaseModel):
     user_id: str
