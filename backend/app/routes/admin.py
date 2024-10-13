@@ -25,7 +25,7 @@ async def delete_event(event_id: str):
     result = await db.events.delete_one({"id": event_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Event not found")
-    return {"message": "Event deleted successfully"}
+    return {"message": "Event deleted  successfully"}
 
 @router.get("/events")
 async def list_all_events():
