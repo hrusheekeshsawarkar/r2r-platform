@@ -2,24 +2,49 @@ from fastapi import APIRouter, HTTPException
 from app.models import UserRegistration, EventProgress
 from app.db import db, to_object_id, convert_dates
 from datetime import date,datetime
-
+from typing import List
 
 router = APIRouter()
+
 
 @router.post("/users/register")
 async def register_for_event(user_registration: UserRegistration):
     existing_user = await db.user_registrations.find_one({"user_id": user_registration.user_id})
     
     user_data = user_registration.dict()
+    print(f"user_data_progress: {user_data}")
+    print(user_registration.event_ids[0])
+    event = await db.events.find_one({"id":user_registration.event_ids[0]})
+    print(f"event_domains: {event}")
+    event_domains=event["domains"]
+    print(f"event_domains: {event_domains}")
+    new_event_progress =existing_user["progress"]
+    for domain in event_domains:
+        domain_progress=  {'event_id': user_registration.event_ids[0], 'domain': domain, 'date': date.today(), 'progress': 0.0}
+        new_event_progress.append(domain_progress)
+    print(new_event_progress)
+    user_data["progress"]=new_event_progress
+
+
     user_data = convert_dates(user_data)  # Apply date conversion
+    print(f"user_data_progress: {user_data}")
 
     if existing_user:
         # Update registered events
         event_ids = set(existing_user["event_ids"] + user_registration.event_ids)
+
+        progress = user_data["progress"]
+        # progress.append(user_data["progress"])
         await db.user_registrations.update_one(
             {"user_id": user_registration.user_id},
-            {"$set": {"event_ids": list(event_ids)}}
+            {"$set": 
+                {
+                    "event_ids": list(event_ids),
+                    "progress": list(progress)
+                }
+            }
         )
+        # pass
     else:
         # Register new user
         # await db.user_registrations.insert_one(user_registration.dict())
