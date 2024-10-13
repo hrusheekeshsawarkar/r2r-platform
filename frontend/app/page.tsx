@@ -164,7 +164,7 @@ export default function LoginPage() {
       <h1 className="text-4xl font-bold mb-8">Login Page</h1>
       <button
         className="bg-blue-500 text-white px-6 py-2 rounded-md"
-        onClick={() => signIn('google')}
+        onClick={() => signIn('google', { callbackUrl: '/users' })}  // Redirect to /users after sign-in
       >
         Sign in with Google
       </button>

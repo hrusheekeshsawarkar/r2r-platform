@@ -9,53 +9,37 @@ export default function UsersPage() {
   const [events, setEvents] = useState([]);
   const [registeredEvents, setRegisteredEvents] = useState([]);
 
-//   useEffect(() => {
-//     const fetchEvents = async () => {
-//       const response = await axios.get('http://localhost:8000/admin/events'); // Your FastAPI events endpoint
-//       console.log(response)
-//       setEvents(response.data);
-//     };
-
-//     const fetchRegisteredEvents = async () => {
-//       const token = localStorage.getItem('token');
-//       const response = await axios.get('/api/users/registered', {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       setRegisteredEvents(response.data);
-//     };
-
-//     fetchEvents();
-//     fetchRegisteredEvents();
-//   }, []);
-// useEffect(() => {
-//     if (status === 'authenticated') {
-//       fetchAvailableEvents();
-//     }
-//   }, [status]);
-
 
   const fetchEvents = async () => {
     const response = await axios.get('http://localhost:8000/admin/events'); // Your FastAPI events endpoint
+    console.log(response.data)
     setEvents(response.data);
   };
 
-  const fetchRegisteredEvents = async () => {
+  const fetchRegisteredEvents = async (userId) => {
     const token = localStorage.getItem('token');
-    const userId = "user-2"; // Replace this with your actual user ID
-    console.log("http://localhost:8000/users/${userId}/events")
-    const response = await axios.get(`http://localhost:8000/user/users/${userId}/events`, {
+    try {
+      // const userId = "user-2"; // Replace this with your actual user ID
+      // console.log("http://localhost:8000/users/${userId}/events")
+      const response = await axios.get(`http://localhost:8000/user/users/${userId}/events`, {
       headers: { Authorization: `Bearer ${token}` },
-    });
-    setRegisteredEvents(response.data);
+      });
+      setRegisteredEvents(response.data);
+    } catch (error) {
+      console.log("Failed to fetch registered events",error)
+    }
+
   };
 
   useEffect(() => {
-    if (status==='authenticated') {
-        fetchEvents();
-        fetchRegisteredEvents();
-        
+    console.log(session?.userId)
+    if (status === 'authenticated' && session?.userId) {
+      // Fetch events and registered events once authenticated and session is available
+      console.log("here i am")
+      fetchEvents();
+      fetchRegisteredEvents(session.userId);  // Use user ID from the session
     }
-  }, [status]);
+  }, [status, session]);
 
   const handleRegister = async (eventId) => {
     const token = localStorage.getItem('token');
@@ -79,7 +63,7 @@ export default function UsersPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Reload registered events after successful registration
-      fetchRegisteredEvents();
+      fetchRegisteredEvents(session?.userId);
     } catch (error) {
       console.error('Registration failed', error);
     }
