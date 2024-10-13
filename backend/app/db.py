@@ -7,13 +7,9 @@ load_dotenv()
 from datetime import date, datetime
 
 # MongoDB client and database initialization
-MONGO_URI = "mongodb://myUserAdmin:Hrushi#321@34.171.126.76:27017/?authSource=admin"
 
-# client = AsyncIOMotorClient("mongodb://34.171.126.76:27017/")
-
-# print(os.getenv("MONGO_URI"))
-# print(os.environ["MONGO_URI"])
-client = AsyncIOMotorClient(MONGO_URI)
+print(os.getenv("MONGO_URI"))
+client = AsyncIOMotorClient(os.getenv("MONGO_URI"))
 db = client.mydatabase
 
 def convert_dates(obj):
