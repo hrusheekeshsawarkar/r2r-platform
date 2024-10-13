@@ -24,3 +24,8 @@ class UserRegistration(BaseModel):
     user_id: str
     event_ids: List[str]  # List of event IDs the user is registered for
     progress: List[EventProgress]  # Track progress of registered events
+
+class UserProgress(BaseModel):
+    user_id: str
+    event_id: str  # List of event IDs the user is registered for
+    progress: List[EventProgress]  # Track progress of registered events

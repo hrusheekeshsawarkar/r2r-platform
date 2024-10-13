@@ -1,11 +1,22 @@
 from fastapi import APIRouter, HTTPException
-from app.models import UserRegistration, EventProgress
+from app.models import UserRegistration, EventProgress,UserProgress
 from app.db import db, to_object_id, convert_dates
 from datetime import date,datetime
 from typing import List
 
 router = APIRouter()
 
+def add_domain(event_domains,user_registration,existing_user=None):
+    if existing_user:
+        new_event_progress=existing_user["progress"]
+    else:
+        new_event_progress=[]
+
+    for domain in event_domains:
+        domain_progress=  {'event_id': user_registration.event_ids[0], 'domain': domain, 'date': date.today(), 'progress': 0.0}
+        new_event_progress.append(domain_progress)
+    print(new_event_progress)
+    return new_event_progress
 
 @router.post("/users/register")
 async def register_for_event(user_registration: UserRegistration):
@@ -18,11 +29,13 @@ async def register_for_event(user_registration: UserRegistration):
     print(f"event_domains: {event}")
     event_domains=event["domains"]
     print(f"event_domains: {event_domains}")
-    new_event_progress =existing_user["progress"]
-    for domain in event_domains:
-        domain_progress=  {'event_id': user_registration.event_ids[0], 'domain': domain, 'date': date.today(), 'progress': 0.0}
-        new_event_progress.append(domain_progress)
-    print(new_event_progress)
+
+    # new_event_progress =existing_user["progress"]
+    # for domain in event_domains:
+    #     domain_progress=  {'event_id': user_registration.event_ids[0], 'domain': domain, 'date': date.today(), 'progress': 0.0}
+    #     new_event_progress.append(domain_progress)
+    # print(new_event_progress)
+    new_event_progress = add_domain(event_domains,user_registration,existing_user)
     user_data["progress"]=new_event_progress
 
 
@@ -53,43 +66,60 @@ async def register_for_event(user_registration: UserRegistration):
     return {"message": "User registered successfully"}
 
 @router.put("/users/progress")
-async def update_progress(user_id: str, event_progress: EventProgress):
-    user = await db.user_registrations.find_one({"user_id": user_id})
+async def update_progress(event_progress: UserProgress):
+# async def update_progress(user_id: str,event_id:str, progress: list):
+    user = await db.user_registrations.find_one({"user_id": event_progress.user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    progress_item = event_progress.dict()
-    progress_item = convert_dates(progress_item)  # Convert date to datetime
+    # progress_item = event_progress.dict()
+    # progress_item = progress.dict()
+    # progress_item = convert_dates(progress_item)  # Convert date to datetime
+    event_progress = convert_dates(event_progress)  # Convert date to datetime
+    print(event_progress)
+
+    for progress_item in event_progress.progress:
+        domain = progress_item.domain
+        date = convert_dates(progress_item.date)
+        progress_value = progress_item.progress
+        print(f"domain: {domain},date: {date}, progress_value: {progress_value},event_progress.event_id: {event_progress.event_id}, userid: {event_progress.user_id}")
+
+        # result = await db.user_registrations.update_one(
+        #     {"user_id": event_progress.user_id, 
+        #     "progress.event_id": event_progress.event_id, 
+        #     "progress.date": date, 
+        #     "progress.domain": domain},
+        #     {"$set": {"progress.$.progress": progress_value}}
+        # )
+                    # Assuming you're using MongoDB, this updates each domain's progress
+        result=await db.events.update_one(
+                {"user_id": event_progress.user_id, "event_id": event_progress.event_id},
+                {
+                    "$set": {
+                        f"progress.{domain}": {
+                            "date": date,
+                            "progress": progress_value
+                        }
+                    }
+                },
+                upsert=True
+            )
+        print(result)        
+        # result = await db.user_registrations.update_one(
+        #     {"user_id": event_progress.user_id, 
+        #     "progress.event_id": event_progress.event_id, 
+        #     "progress.date": event_progress["date"], 
+        #     "progress.domain": event_progress.domain},
+        #     {"$set": {"progress.$.progress": event_progress.progress}}
+        # )
     
-    # Update or insert progress for the specified date
-    # progress_item = {
-    #     "event_id": event_progress.event_id,
-    #     "domain": event_progress.domain,
-    #     # "date": event_progress.date,
-    #     "date": datetime.combine(event_progress.date, datetime.min.time()),  # Combine with minimum time
-    #     "progress": event_progress.progress
-    # }
-    
-    # await db.user_registrations.update_one(
-    #     {"user_id": user_id, "progress.date": progress_item["date"], "progress.event_id": event_progress.event_id, "progress.domain": event_progress.domain},
-    #     {"$set": {"progress.$": progress_item}},
-    #     upsert=True
-    # )
-    # Check if there is already progress for the given date, event, and domain
-    result = await db.user_registrations.update_one(
-        {"user_id": user_id, 
-         "progress.event_id": event_progress.event_id, 
-         "progress.date": progress_item["date"], 
-         "progress.domain": event_progress.domain},
-        {"$set": {"progress.$.progress": event_progress.progress}}
-    )
-    
-    # If no matching progress entry exists, we add a new one
-    if result.matched_count == 0:
-        await db.user_registrations.update_one(
-            {"user_id": user_id},
-            {"$push": {"progress": progress_item}}
-        )
+    # # If no matching progress entry exists, we add a new one
+        if result.matched_count == 0:
+            print("no match")
+    #     await db.user_registrations.update_one(
+    #         {"user_id": user_id},
+    #         {"$push": {"progress": progress_item}}
+    #     )
     
     return {"message": "Progress updated successfully"}
 

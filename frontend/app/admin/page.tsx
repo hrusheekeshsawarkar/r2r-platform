@@ -255,7 +255,7 @@ export default function AdminPage() {
   const openModal = (event = null) => {
     if (event) {
       // Editing an event
-      console.log("in  edititn")
+      // console.log("in  edititn")
       setIsEditing(true);
       setCurrentEventId(event.id);
       setEventId(event.id);
@@ -285,7 +285,7 @@ export default function AdminPage() {
     try {
       if (isEditing) {
         // Update event
-        console.log("in editi")
+        // console.log("in editi")
         await axios.put(`http://localhost:8000/admin/events/${currentEventId}`, eventData, {
           headers: {
             'Content-Type': 'application/json',
