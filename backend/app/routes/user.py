@@ -129,3 +129,12 @@ async def get_registered_events(user_id: str):
         event.pop("_id", None)  # Remove _id if it exists
     
     return events
+
+@router.get("/users/{user_id}/{event_id}/{progress_date}/progress")
+async def get_user_event_progress(user_id: str,event_id: str,progress_date: date):
+    user = await db.user_registrations.find_one({"user_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    date = convert_dates(progress_date)
+    event_progress_item = await db.user_registrations.find_one({"user_id": user_id,"event_id":event_id,"date":date})
+    print(event_progress_item)

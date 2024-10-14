@@ -242,7 +242,11 @@ export default function UsersPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [progressData, setProgressData] = useState([]);
-
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Set default date to today in YYYY-MM-DD format
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   const fetchEvents = async () => {
     const response = await axios.get('http://localhost:8000/admin/events'); // Your FastAPI events endpoint
     setEvents(response.data);
@@ -303,6 +307,7 @@ export default function UsersPage() {
 
     setSelectedEvent(event);
     setProgressData(initializedProgressData);
+    setSelectedDate(today); // Set default date in the date input field
     setShowModal(true);
   };
 
@@ -317,7 +322,10 @@ export default function UsersPage() {
     const data = {
       "user_id": session?.userId,
       "event_id": selectedEvent.id,
-      "progress": progressData // Use the full progress data with event_id, domain, date, and progress
+      "progress": progressData.map(progress => ({
+        ...progress,
+        date: selectedDate // Use the selected date for all progress updates
+      }))
     };
     try {
       await axios.put('http://localhost:8000/user/users/progress', data, {
@@ -374,7 +382,13 @@ export default function UsersPage() {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-96">
             <h2 className="text-xl font-semibold mb-4">Update Progress for {selectedEvent.name}</h2>
-            
+            <label className="block mb-2 font-medium">Select Date</label>
+            <input
+              type="date"
+              className="w-full p-2 border rounded-md mb-4"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
             {progressData.map((domainData, index) => (
               <div key={index} className="mb-4">
                 <label className="block mb-1 font-medium">{domainData.domain}</label>
