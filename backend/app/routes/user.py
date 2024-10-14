@@ -30,11 +30,6 @@ async def register_for_event(user_registration: UserRegistration):
     event_domains=event["domains"]
     print(f"event_domains: {event_domains}")
 
-    # new_event_progress =existing_user["progress"]
-    # for domain in event_domains:
-    #     domain_progress=  {'event_id': user_registration.event_ids[0], 'domain': domain, 'date': date.today(), 'progress': 0.0}
-    #     new_event_progress.append(domain_progress)
-    # print(new_event_progress)
     new_event_progress = add_domain(event_domains,user_registration,existing_user)
     user_data["progress"]=new_event_progress
 
@@ -60,7 +55,6 @@ async def register_for_event(user_registration: UserRegistration):
         # pass
     else:
         # Register new user
-        # await db.user_registrations.insert_one(user_registration.dict())
         await db.user_registrations.insert_one(user_data)
     
     return {"message": "User registered successfully"}
@@ -72,9 +66,6 @@ async def update_progress(event_progress: UserProgress):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # progress_item = event_progress.dict()
-    # progress_item = progress.dict()
-    # progress_item = convert_dates(progress_item)  # Convert date to datetime
     event_progress = convert_dates(event_progress)  # Convert date to datetime
     print(event_progress)
 
@@ -92,7 +83,7 @@ async def update_progress(event_progress: UserProgress):
         #     {"$set": {"progress.$.progress": progress_value}}
         # )
                     # Assuming you're using MongoDB, this updates each domain's progress
-        result=await db.events.update_one(
+        result=await db.user_registrations.update_one(
                 {"user_id": event_progress.user_id, "event_id": event_progress.event_id},
                 {
                     "$set": {
