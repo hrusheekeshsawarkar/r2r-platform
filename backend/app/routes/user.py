@@ -65,37 +65,48 @@ async def update_progress(event_progress: UserProgress):
     user = await db.user_registrations.find_one({"user_id": event_progress.user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    event_progress.date = convert_dates(event_progress.date)  # Convert date to datetime
     
-    event_progress = convert_dates(event_progress)  # Convert date to datetime
-    print(event_progress)
+    progress_date = await db.user_progress.find_one({"user_id": event_progress.user_id, "event_id": event_progress.event_id,"date": event_progress.date,})
 
-    for progress_item in event_progress.progress:
-        domain = progress_item.domain
-        date = convert_dates(progress_item.date)
-        progress_value = progress_item.progress
-        print(f"domain: {domain},date: {date}, progress_value: {progress_value},event_progress.event_id: {event_progress.event_id}, userid: {event_progress.user_id}")
+    if not progress_date:
+        print("no match")
+        # event_progress.date=convert_dates(event_progress.date)
+        print(type(event_progress))
+        print(event_progress)
+        await db.user_progress.insert_one(event_progress.dict())
+        return {"message": "Progress updated successfully"}
+    else:
+        print(event_progress)
 
-        # result = await db.user_registrations.update_one(
-        #     {"user_id": event_progress.user_id, 
-        #     "progress.event_id": event_progress.event_id, 
-        #     "progress.date": date, 
-        #     "progress.domain": domain},
-        #     {"$set": {"progress.$.progress": progress_value}}
-        # )
-                    # Assuming you're using MongoDB, this updates each domain's progress
-        result=await db.user_registrations.update_one(
-                {"user_id": event_progress.user_id, "event_id": event_progress.event_id},
-                {
-                    "$set": {
-                        f"progress.{domain}": {
-                            "date": date,
-                            "progress": progress_value
+        for progress_item in event_progress.progress:
+            domain = progress_item.domain
+            # date = convert_dates(progress_item.date)
+            # event_progress.date = convert_dates(event_progress.date)
+            progress_value = progress_item.progress
+            print(f"domain: {domain}, progress_value: {progress_value},event_progress.event_id: {event_progress.event_id}, userid: {event_progress.user_id}")
+
+            # result = await db.user_registrations.update_one(
+            #     {"user_id": event_progress.user_id, 
+            #     "progress.event_id": event_progress.event_id, 
+            #     "progress.date": date, 
+            #     "progress.domain": domain},
+            #     {"$set": {"progress.$.progress": progress_value}}
+            # )
+                        # Assuming you're using MongoDB, this updates each domain's progress
+            result=await db.user_progress.update_one(
+                    {"user_id": event_progress.user_id, "event_id": event_progress.event_id,"date": event_progress.date,},
+                    {
+                        "$set": {
+                            f"progress.{domain}": {
+                                # "date": date,
+                                "progress": progress_value
+                            },                       
                         }
-                    }
-                },
-                upsert=True
-            )
-        print(result)        
+                    },
+                    upsert=True
+                )
+            print(result)        
         # result = await db.user_registrations.update_one(
         #     {"user_id": event_progress.user_id, 
         #     "progress.event_id": event_progress.event_id, 
@@ -105,12 +116,10 @@ async def update_progress(event_progress: UserProgress):
         # )
     
     # # If no matching progress entry exists, we add a new one
-        if result.matched_count == 0:
-            print("no match")
-    #     await db.user_registrations.update_one(
-    #         {"user_id": user_id},
-    #         {"$push": {"progress": progress_item}}
-    #     )
+        # if result.matched_count == 0:
+        #     print("no match")
+        #     await db.user_progress.insert_one(event_progress)
+        #     break
     
     return {"message": "Progress updated successfully"}
 
@@ -136,5 +145,13 @@ async def get_user_event_progress(user_id: str,event_id: str,progress_date: date
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     date = convert_dates(progress_date)
-    event_progress_item = await db.user_registrations.find_one({"user_id": user_id,"event_id":event_id,"date":date})
-    print(event_progress_item)
+    event_progress_item = await db.user_progress.find_one({"user_id": user_id,"event_id":event_id,"date":date})
+    if event_progress_item:
+        print(event_progress_item)
+        print(type(event_progress_item))
+        event_progress_item.pop("_id", None)
+        # for event in event_progress_item:
+        #     event.pop("_id", None)  # Remove _id if it exists
+        return event_progress_item
+    else:
+        return "No Progress found for the date"

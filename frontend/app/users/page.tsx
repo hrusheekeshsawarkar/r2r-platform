@@ -301,7 +301,7 @@ export default function UsersPage() {
     const initializedProgressData = event.domains.map(domain => ({
       event_id: event.id,
       domain: domain,
-      date: today,
+      // date: today,
       progress: 0
     }));
 
@@ -322,9 +322,10 @@ export default function UsersPage() {
     const data = {
       "user_id": session?.userId,
       "event_id": selectedEvent.id,
+      "date":selectedDate,
       "progress": progressData.map(progress => ({
         ...progress,
-        date: selectedDate // Use the selected date for all progress updates
+        // date: selectedDate // Use the selected date for all progress updates
       }))
     };
     try {

@@ -11,14 +11,14 @@ class Event(BaseModel):
 class EventProgress(BaseModel):
     event_id: str
     domain: str
-    date: date
+    # date: date
     progress: float  # Progress in a particular domain (e.g., distance, time, etc.)
+    # def dict(self, *args, **kwargs):
+    #     data = super().dict(*args, **kwargs)
+    #     # Convert date to datetime
+    #     data['date'] = datetime.combine(data['date'], datetime.min.time())
+    #     return data
 
-    def dict(self, *args, **kwargs):
-        data = super().dict(*args, **kwargs)
-        # Convert date to datetime
-        data['date'] = datetime.combine(data['date'], datetime.min.time())
-        return data
 
 class UserRegistration(BaseModel):
     user_id: str
@@ -28,4 +28,12 @@ class UserRegistration(BaseModel):
 class UserProgress(BaseModel):
     user_id: str
     event_id: str  # List of event IDs the user is registered for
+    date: date
     progress: List[EventProgress]  # Track progress of registered events
+
+
+    def dict(self, *args, **kwargs):
+        data = super().dict(*args, **kwargs)
+        # Convert date to datetime
+        data['date'] = datetime.combine(data['date'], datetime.min.time())
+        return data
