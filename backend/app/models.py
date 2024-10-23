@@ -9,7 +9,7 @@ class Event(BaseModel):
     domains: List[str]  # List of domains (e.g., running, cycling, etc.)
 
 class EventProgress(BaseModel):
-    event_id: str
+    # event_id: str
     domain: str
     # date: date
     progress: float  # Progress in a particular domain (e.g., distance, time, etc.)

@@ -77,36 +77,48 @@ async def update_progress(event_progress: UserProgress):
         await db.user_progress.insert_one(event_progress.dict())
         return {"message": "Progress updated successfully"}
     else:
+        event_progress=event_progress.dict()
         print(event_progress)
+        print(type(event_progress))
 
-        for progress_item in event_progress.progress:
-            domain = progress_item.domain
-            # date = convert_dates(progress_item.date)
-            # event_progress.date = convert_dates(event_progress.date)
-            progress_value = progress_item.progress
-            print(f"domain: {domain}, progress_value: {progress_value},event_progress.event_id: {event_progress.event_id}, userid: {event_progress.user_id}")
+        print(event_progress["progress"])
 
-            # result = await db.user_registrations.update_one(
-            #     {"user_id": event_progress.user_id, 
-            #     "progress.event_id": event_progress.event_id, 
-            #     "progress.date": date, 
-            #     "progress.domain": domain},
-            #     {"$set": {"progress.$.progress": progress_value}}
-            # )
-                        # Assuming you're using MongoDB, this updates each domain's progress
-            result=await db.user_progress.update_one(
-                    {"user_id": event_progress.user_id, "event_id": event_progress.event_id,"date": event_progress.date,},
-                    {
-                        "$set": {
-                            f"progress.{domain}": {
-                                # "date": date,
-                                "progress": progress_value
-                            },                       
-                        }
-                    },
-                    upsert=True
-                )
-            print(result)        
+        result=await db.user_progress.update_one(
+                { "user_id": event_progress["user_id"], "event_id": event_progress["event_id"],"date": event_progress["date"], },
+                { "$set": { "progress": event_progress["progress"]
+                           
+                }}
+            )
+        print(result)        
+
+        # for progress_item in event_progress.progress:
+        #     domain = progress_item.domain
+        #     # date = convert_dates(progress_item.date)
+        #     # event_progress.date = convert_dates(event_progress.date)
+        #     progress_value = progress_item.progress
+        #     print(f"domain: {domain}, progress_value: {progress_value},event_progress.event_id: {event_progress.event_id}, userid: {event_progress.user_id}")
+
+        #     # result = await db.user_registrations.update_one(
+        #     #     {"user_id": event_progress.user_id, 
+        #     #     "progress.event_id": event_progress.event_id, 
+        #     #     "progress.date": date, 
+        #     #     "progress.domain": domain},
+        #     #     {"$set": {"progress.$.progress": progress_value}}
+        #     # )
+        #                 # Assuming you're using MongoDB, this updates each domain's progress
+        #     result=await db.user_progress.update_one(
+        #             {"user_id": event_progress.user_id, "event_id": event_progress.event_id,"date": event_progress.date,},
+        #             {
+        #                 "$set": {
+        #                     f"progress.{domain}": {
+        #                         # "date": date,
+        #                         "progress": progress_value
+        #                     },                       
+        #                 }
+        #             },
+        #             upsert=True
+        #         )
+        #     print(result)        
         # result = await db.user_registrations.update_one(
         #     {"user_id": event_progress.user_id, 
         #     "progress.event_id": event_progress.event_id, 
