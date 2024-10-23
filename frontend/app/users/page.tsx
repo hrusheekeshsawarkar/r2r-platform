@@ -270,6 +270,75 @@ export default function UsersPage() {
       fetchRegisteredEvents(session.userId);
     }
   }, [status, session]);
+  useEffect(() => {
+    if (selectedEvent && selectedDate) {
+      fetchProgress(selectedEvent.id, selectedDate, selectedEvent.domains);
+    }
+  }, [selectedEvent, selectedDate]);
+
+  
+  const transformProgressData = (progressObj, domains) => {
+    if (!progressObj) return [];
+    
+    // If progressObj is already an array, return it
+    if (Array.isArray(progressObj)) return progressObj;
+    
+    // Transform the object into an array format
+    return domains.map(domain => ({
+      domain: domain,
+      progress: progressObj[domain]?.progress || 0
+    }));
+  };
+
+  // Function to fetch progress for the selected date and event
+  const fetchProgress = async (eventId, date,domains) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.get(`http://localhost:8000/user/users/${session?.userId}/${eventId}/${date}/progress`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log("response data:",response.data)
+      console.log("domains:",domains)
+      if (typeof response.data === 'string' && response.data.includes("No Progress found")) {
+          // Set progress to 0 if no progress is found
+        console.log("No progress data found for this date")
+        // Set progress to 0 for all domains if no progress is found
+        if (domains) {
+          const defaultProgress = domains.map(domain => ({
+            // event_id: eventId,
+            domain: domain,
+            progress: 0
+          }));
+          console.log("Setting default progress data:", defaultProgress); // Log default progress data
+
+          setProgressData(defaultProgress);
+        } else {
+          console.error("Domains are undefined when setting default progress.");
+        }
+      } else {
+        // Transform the object-based progress data into an array
+        const transformedProgress = transformProgressData(response.data.progress, domains);
+        console.log("Transformed progress data:", transformedProgress);
+        setProgressData(transformedProgress);
+      }
+      // Add a console log to verify the progress data
+      console.log("Progress data:", response.data.progress);
+    } catch (error) {
+      console.error("Failed to fetch progress", error);
+      if (domains) {
+        const defaultProgress = domains.map(domain => ({
+          event_id: eventId,
+          domain: domain,
+          progress: 0
+        }));
+        console.log("Setting default progress after error:", defaultProgress);
+        setProgressData(defaultProgress);
+      } else {
+        setProgressData([]);
+      }
+    }
+  };
+
 
   const handleRegister = async (eventId) => {
     const token = localStorage.getItem('token');
@@ -294,21 +363,48 @@ export default function UsersPage() {
     }
   };
 
-  const openModal = (event) => {
+  const openModal = async (event) => {
+    console.log("Opening modal for event:", event);
     const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
 
     // Initialize progress data for each domain with event_id and today's date
-    const initializedProgressData = event.domains.map(domain => ({
-      event_id: event.id,
-      domain: domain,
-      // date: today,
-      progress: 0
-    }));
+    // const initializedProgressData = event.domains.map(domain => ({
+    //   event_id: event.id,
+    //   domain: domain,
+    //   // date: today,
+    //   progress: 0
+    // }));
+    // setProgressData(initializedProgressData);
+
+    if (!event.domains) {
+      console.error("Event domains are missing:", event);
+      return;
+    }
 
     setSelectedEvent(event);
-    setProgressData(initializedProgressData);
     setSelectedDate(today); // Set default date in the date input field
+
+    console.log("Fetching progress for:", {
+      eventId: event.id,
+      date: today,
+      domains: event.domains
+    });
+
+    // Fetch progress for the event on today's date when the modal is opened
+    if (event.domains) {
+      await fetchProgress(event.id, today, event.domains); // Pass event domains directly
+    } else {
+      console.error("Event domains are undefined.");
+    }
     setShowModal(true);
+    console.log("Selected event:", event); // Log selected event to verify domains
+
+  };
+
+  const handleDateChange = async (newDate) => {
+    setSelectedDate(newDate);
+    await fetchProgress(selectedEvent.id, newDate,selectedEvent.domains); // Fetch progress for the new selected date
+    
   };
 
   const handleProgressChange = (index, value) => {
@@ -319,6 +415,11 @@ export default function UsersPage() {
 
   const handleSaveProgress = async () => {
     const token = localStorage.getItem('token');
+        // Transform array back to object format for API
+        const progressObject = progressData.reduce((acc, item) => {
+          acc[item.domain] = { progress: item.progress };
+          return acc;
+        }, {});
     const data = {
       "user_id": session?.userId,
       "event_id": selectedEvent.id,
@@ -328,6 +429,8 @@ export default function UsersPage() {
         // date: selectedDate // Use the selected date for all progress updates
       }))
     };
+    console.log("Saving progress data:", data);
+
     try {
       await axios.put('http://localhost:8000/user/users/progress', data, {
         headers: { Authorization: `Bearer ${token}` },
@@ -338,6 +441,27 @@ export default function UsersPage() {
       console.error('Progress update failed', error);
     }
   };
+
+  // useEffect(() => {
+  //   console.log("Updated progressData:", progressData);
+  //   console.log("bool: ",progressData && progressData.length > 0 ? "cec":"ww");
+  //   console.log("boo2l: ", progressData.length > 0 ? "cec":"ww");
+  //   console.log(typeof progressData)
+  // }, [progressData]);
+
+  // Add debugging useEffect
+  useEffect(() => {
+    if (showModal) {
+      console.log("Modal state:", {
+        selectedEvent,
+        selectedDate,
+        progressData,
+        progressDataLength: progressData?.length,
+        hasProgressData: Boolean(progressData && progressData.length > 0)
+      });
+    }
+  }, [showModal, selectedEvent, selectedDate, progressData]);
+  
 
   return (
     <div className="container mx-auto p-6">
@@ -364,7 +488,7 @@ export default function UsersPage() {
       <h1 className="text-2xl font-semibold mt-8 mb-4">Registered Events</h1>
       <ul className="space-y-4">
         {registeredEvents.map((event) => (
-          <li key={event._id} className="p-4 bg-white shadow rounded-lg">
+          <li key={event.id} className="p-4 bg-white shadow rounded-lg">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">{event.name}</h2>
               <button 
@@ -388,19 +512,30 @@ export default function UsersPage() {
               type="date"
               className="w-full p-2 border rounded-md mb-4"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              // onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => handleDateChange(e.target.value)}
             />
-            {progressData.map((domainData, index) => (
-              <div key={index} className="mb-4">
-                <label className="block mb-1 font-medium">{domainData.domain}</label>
-                <input
-                  type="number"
-                  className="w-full p-2 border rounded-md"
-                  value={domainData.progress}
-                  onChange={(e) => handleProgressChange(index, e.target.value)}
-                />
-              </div>
-            ))}
+              {/* Add debug information */}
+                <div className="text-sm text-gray-500 mb-2">
+              Debug: Progress Data Length: {progressData?.length}
+            </div>
+            {progressData && progressData.length > 0 ? (
+            // {progressData &&  (
+              progressData.map((domainData, index) => (
+                // progressData.map((domains) => (
+                <div key={`${domainData.domain}-${index}`}  className="mb-4">
+                  <label className="block mb-1 font-medium">{domainData.domain||"Unk"}</label>
+                  <input
+                    type="number"
+                    className="w-full p-2 border rounded-md"
+                    value={domainData.progress||0}
+                    onChange={(e) => handleProgressChange(index, e.target.value,1)}
+                  />
+                </div>
+              ))
+            )  : (
+               <p>No progress data available.</p>
+             )} 
 
             <div className="flex justify-end">
               <button
